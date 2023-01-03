@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.concurrent.CountDownLatch;
 
 import static java.sql.Connection.TRANSACTION_READ_UNCOMMITTED;
 
@@ -19,6 +20,23 @@ public class MyService {
     private final String user;
     private final String password;
 
+    private CountDownLatch updateDone;
+    private CountDownLatch readyForCommit;
+    private CountDownLatch commitDone;
+
+
+    public CountDownLatch getUpdateDone() {
+        return updateDone;
+    }
+    public CountDownLatch getReadyForCommit() {
+        return readyForCommit;
+    }
+
+    public CountDownLatch getCommitDone() {
+        return commitDone;
+    }
+
+
     public MyService(MyEntityRepository repository, DataSourceProperties dataSourceProperties) {
         this.repository = repository;
         this.dbUrl = dataSourceProperties.determineUrl();
@@ -26,8 +44,17 @@ public class MyService {
         this.password = dataSourceProperties.determinePassword();
     }
 
+    void reset() {
+        updateDone = new CountDownLatch(1);
+        readyForCommit = new CountDownLatch(1);
+        commitDone = new CountDownLatch(1);
+    }
+
     // https://www.tutorialspoint.com/jdbc/commit-rollback.htm
     void update() {
+
+
+
         Connection conn = null;
         Statement stmt = null;
         try {
@@ -44,8 +71,12 @@ public class MyService {
                             "WHERE ID = 1"
             );
 
-            Thread.sleep(10000);
+            updateDone.countDown();
+            readyForCommit.await();
+
             conn.commit();
+
+            commitDone.countDown();
         } catch (SQLException se) {
             se.printStackTrace();
             try {

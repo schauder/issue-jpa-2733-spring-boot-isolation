@@ -12,25 +12,33 @@ class ExampleIT {
 
     @Test
     void example1() throws InterruptedException {
+        myService.reset();
         new Thread(() -> myService.update()).start();
 
-        Thread.sleep(1000); // wait for stmt.executeUpdate() to be executed (MyService)
+        myService.getUpdateDone().await();// wait for stmt.executeUpdate() to be executed (MyService)
 
         String committedDataBeforeCommit = readCommittedData();
 
         Assertions.assertEquals("INITIAL", committedDataBeforeCommit);
+
+        myService.getReadyForCommit().countDown();
+        myService.getCommitDone().await();
     }
 
     @Test
     void example2() throws InterruptedException {
+        myService.reset();
         new Thread(() -> myService.update()).start();
 
-        Thread.sleep(1000); // wait for stmt.executeUpdate() to be executed (MyService)
+        myService.getUpdateDone().await();// wait for stmt.executeUpdate() to be executed (MyService)
 
         String uncommittedDataBeforeCommit = readUncommittedData(); // introduce side effects
         String committedDataBeforeCommit = readCommittedData();
 
         Assertions.assertEquals("INITIAL", committedDataBeforeCommit);
+
+        myService.getReadyForCommit().countDown();
+        myService.getCommitDone().await();
     }
 
     String readUncommittedData() {
