@@ -23,7 +23,7 @@ class ExampleIT {
 
     @Test
     void example2() throws InterruptedException {
-        new Thread(() -> myService.update()).run();
+        new Thread(() -> myService.update()).start();
 
         Thread.sleep(1000); // wait for stmt.executeUpdate() to be executed (MyService)
 
